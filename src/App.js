@@ -1,24 +1,84 @@
-import logo from './logo.svg';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './components/Auth/AuthContext';
+import { useAuth } from './components/Auth/AuthContext';
+import Layout from './components/Layout/Layout';
+import Dashboard from './pages/Dashboard/Dashboard';
+import Cars from './pages/Cars/Cars';
+import AddCar from './pages/Cars/AddCar';
+import EditCar from './pages/Cars/EditCar';
+import BulkUpdateCars from './pages/Cars/BulkUpdateCars';
+import Bookings from './pages/Bookings/Bookings';
+import Users from './pages/Users/Users';
+import Analytics from './pages/Analytics/Analytics';
+import Settings from './pages/Settings/Settings';
+import Maintenance from './pages/Maintenance/Maintenance';
+import EmployeeManagement from './pages/Employees/EmployeeManagement';
+import AdminPanel from './pages/Admin/AdminPanel';
+import LoginPage from './components/Auth/LoginPage';
 import './App.css';
+
+// Component to handle authentication routing
+const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={
+          isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/dashboard" element={
+          isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/cars" element={
+          isAuthenticated ? <Cars /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/cars/new" element={
+          isAuthenticated ? <AddCar /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/cars/edit/:id" element={
+          isAuthenticated ? <EditCar /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/cars/bulk-update" element={
+          isAuthenticated ? <BulkUpdateCars /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/bookings" element={
+          isAuthenticated ? <Bookings /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/users" element={
+          isAuthenticated ? <Users /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/analytics" element={
+          isAuthenticated ? <Analytics /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/settings" element={
+          isAuthenticated ? <Settings /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/maintenance" element={
+          isAuthenticated ? <Maintenance /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/employees" element={
+          isAuthenticated ? <EmployeeManagement /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/admin" element={
+          isAuthenticated ? <AdminPanel /> : <Navigate to="/login" replace />
+        } />
+      </Routes>
+    </Layout>
+  );
+};
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <AppRoutes />
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 
