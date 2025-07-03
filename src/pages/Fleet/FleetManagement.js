@@ -14,7 +14,8 @@ import {
   FileText,
   XCircle,
   AlertCircle,
-  Users
+  Users,
+  Edit
 } from 'lucide-react';
 
 // Import components
@@ -47,6 +48,8 @@ const FleetManagement = () => {
   const [showVehicleDetails, setShowVehicleDetails] = useState(false);
   const [showVehicleEditModal, setShowVehicleEditModal] = useState(false);
   const [selectedVehicleForEdit, setSelectedVehicleForEdit] = useState(null);
+  const [showIndividualDeleteModal, setShowIndividualDeleteModal] = useState(false);
+  const [selectedVehicleForDelete, setSelectedVehicleForDelete] = useState(null);
   const [trackingSearch, setTrackingSearch] = useState('');
   const [prefilledMaintenanceData, setPrefilledMaintenanceData] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -109,9 +112,9 @@ const FleetManagement = () => {
     try {
       const updateTimestamp = new Date().toISOString();
       
-      // Count affected vehicles before the update
-      const affectedVehicles = storeVehicles.filter(v => v.make === make && v.model === model);
-      console.log(`🎯 Found ${affectedVehicles.length} vehicles to update`);
+      // Count affected vehicles from current fleet data
+      const affectedVehicles = fleetData.vehicles.filter(v => v.make === make && v.model === model);
+      console.log(`🎯 Found ${affectedVehicles.length} vehicles to update in fleet data`);
 
       if (affectedVehicles.length === 0) {
         console.log('⚠️ No vehicles found to update');
@@ -122,10 +125,10 @@ const FleetManagement = () => {
       setFleetData(prev => {
         const updatedVehicles = prev.vehicles.map(vehicle => {
           if (vehicle.make === make && vehicle.model === model) {
-            console.log(`📝 Updating vehicle ${vehicle.licensePlate} image`);
+            console.log(`📝 Updating vehicle ${vehicle.licensePlate} image from ${vehicle.image || 'none'} to ${imageUrl || 'none'}`);
             return {
               ...vehicle,
-              image: imageUrl || '',
+              image: imageUrl || '/img/cars/default.svg',
               updatedAt: updateTimestamp
             };
           }
@@ -138,33 +141,30 @@ const FleetManagement = () => {
         };
         
         console.log('✅ Fleet data updated with new images');
+        
+        // Log the updated vehicles for debugging
+        const updatedAffected = newFleetData.vehicles.filter(v => v.make === make && v.model === model);
+        console.log('🔍 Updated vehicles images:', updatedAffected.map(v => ({
+          plate: v.licensePlate,
+          image: v.image ? (v.image.startsWith('data:') ? `data:${v.image.substring(5, 50)}...` : v.image) : 'none'
+        })));
+        
         return newFleetData;
       });
 
       // Also update the store for tracking tab
       updateStoreGroupImages(make, model, { url: imageUrl, preview: imageUrl });
 
-      // Force multiple UI refreshes to ensure changes propagate
+      // Multiple refreshes to ensure UI updates properly
       setTimeout(() => {
         forceRefresh();
         console.log('🔄 First UI refresh after bulk image update');
-      }, 100);
+      }, 50);
       
       setTimeout(() => {
         forceRefresh();
         console.log('🔄 Second UI refresh after bulk image update');
-      }, 500);
-
-      setTimeout(() => {
-        forceRefresh();
-        console.log('🔄 Third UI refresh after bulk image update');
-      }, 1000);
-
-      // Additional refresh to ensure VehicleCard components update
-      setTimeout(() => {
-        forceRefresh();
-        console.log('🔄 Fourth UI refresh to ensure VehicleCard updates');
-      }, 1500);
+      }, 200);
       
       // Determine image type for notification
       let imageType = 'removed';
@@ -375,30 +375,34 @@ const FleetManagement = () => {
     return savedData ? JSON.parse(savedData) : getDefaultFleetData();
   });
 
-  // Initialize fleet store with local data and keep them in sync
+  // Initialize fleet store with local data ONLY on component mount
   useEffect(() => {
     console.log('🔄 FleetManagement: Initializing fleet store with', fleetData.vehicles.length, 'vehicles');
     initializeFleet(fleetData);
-  }, [fleetData, initializeFleet]);
+  }, [initializeFleet]); // Only depends on initializeFleet, not fleetData
 
-  // Sync local fleet data with store when store vehicles change (for updates)
+  // Sync local fleet data with store when store vehicles change (for updates from other components)
   useEffect(() => {
     if (storeVehicles.length > 0) {
-      // Check if any vehicles in store are different from local data
-      const hasChanges = storeVehicles.some((storeVehicle, index) => {
-        const localVehicle = fleetData.vehicles[index];
-        return !localVehicle || JSON.stringify(storeVehicle) !== JSON.stringify(localVehicle);
-      });
+      // Only sync if we have actual changes from the store (not from local updates)
+      const localVehicleIds = new Set(fleetData.vehicles.map(v => v.id));
+      const storeVehicleIds = new Set(storeVehicles.map(v => v.id));
       
-      if (hasChanges) {
-        console.log('🔄 FleetManagement: Detected store changes, syncing local data');
+      // Check if there are different vehicles (added/removed) or if lengths differ
+      const hasStructuralChanges = 
+        storeVehicles.length !== fleetData.vehicles.length ||
+        !storeVehicles.every(sv => localVehicleIds.has(sv.id)) ||
+        !fleetData.vehicles.every(lv => storeVehicleIds.has(lv.id));
+      
+      if (hasStructuralChanges) {
+        console.log('🔄 FleetManagement: Detected store structural changes, syncing local data');
         setFleetData(prev => ({
           ...prev,
           vehicles: storeVehicles
         }));
       }
     }
-  }, [storeVehicles, fleetData]); // Trigger when store vehicles change
+  }, [storeVehicles]); // Only depend on storeVehicles, not fleetData
 
   // Enhanced localStorage save with proper image handling
   useEffect(() => {
@@ -527,9 +531,21 @@ const FleetManagement = () => {
     // After grouping, set the group image to the most recently updated valid image
     Object.values(groups).forEach(group => {
       const validImages = group.vehicles
-        .filter(v => v.image && v.image !== '/img/cars/default.png' && v.image.trim() !== '')
+        .filter(v => v.image && v.image !== '/img/cars/default.svg' && v.image.trim() !== '')
         .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
-      group.image = validImages.length > 0 ? validImages[0].image : '/img/cars/default.png';
+      group.image = validImages.length > 0 ? validImages[0].image : '/img/cars/default.svg';
+      
+      // Debug logging for image assignment
+      console.log(`🖼️ Group ${group.make} ${group.model} image assignment:`, {
+        totalVehicles: group.vehicles.length,
+        validImages: validImages.length,
+        assignedImage: group.image.startsWith('data:') ? `data:${group.image.substring(5, 50)}...` : group.image,
+        vehicleImages: group.vehicles.map(v => ({ 
+          id: v.id, 
+          plate: v.licensePlate, 
+          image: v.image ? (v.image.startsWith('data:') ? `data:${v.image.substring(5, 50)}...` : v.image) : 'none' 
+        }))
+      });
     });
     return Object.values(groups);
   };
@@ -609,6 +625,43 @@ const FleetManagement = () => {
     setSelectedBulkVehicle(null);
   };
 
+  // Individual vehicle delete functions
+  const handleIndividualDelete = (vehicle) => {
+    console.log('🗑️ Individual delete requested for vehicle:', vehicle);
+    setSelectedVehicleForDelete(vehicle);
+    setShowIndividualDeleteModal(true);
+  };
+
+  const confirmIndividualDelete = () => {
+    if (selectedVehicleForDelete) {
+      const vehicle = selectedVehicleForDelete;
+      
+      // Remove from fleet data
+      setFleetData(prev => ({
+        ...prev,
+        vehicles: prev.vehicles.filter(v => v.id !== vehicle.id)
+      }));
+
+      // Also delete from store for tracking tab
+      deleteStoreVehicle(vehicle.id);
+      
+      // Force refresh to update the UI
+      setTimeout(() => {
+        forceRefresh();
+      }, 100);
+      
+      showEnhancedNotification(
+        'success', 
+        'Vehicle Deleted Successfully', 
+        `${vehicle.make} ${vehicle.model} (${vehicle.licensePlate}) has been permanently removed from the fleet. This action affects all related maintenance records and analytics.`,
+        6000
+      );
+    }
+    
+    setShowIndividualDeleteModal(false);
+    setSelectedVehicleForDelete(null);
+  };
+
   const exportFleetData = () => {
     const data = JSON.stringify(fleetData, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
@@ -660,7 +713,7 @@ const FleetManagement = () => {
         vehicles: prev.vehicles.map(vehicle => 
           vehicle.id === updatedVehicle.id ? {
             ...updatedVehicle,
-            image: updatedVehicle.image || vehicle.image || '/img/cars/default.png',
+            image: updatedVehicle.image || vehicle.image || '/img/cars/default.svg',
             updatedAt: new Date().toISOString(),
             // Ensure all required fields are present
             id: vehicle.id, // Preserve original ID
@@ -676,16 +729,11 @@ const FleetManagement = () => {
     // Also update the store for tracking tab
     updateStoreVehicle(updatedVehicle.id, updatedVehicle);
 
-    // Force multiple UI refreshes to ensure data propagation
+    // Single UI refresh after a short delay to ensure state updates are complete
     setTimeout(() => {
       forceRefresh();
-      console.log('🔄 First UI refresh after vehicle update');
+      console.log('🔄 UI refresh after vehicle update');
     }, 100);
-    
-    setTimeout(() => {
-      forceRefresh();
-      console.log('🔄 Second UI refresh after vehicle update');
-    }, 500);
     
     // Enhanced success notification
     const changesSummary = [];
@@ -1074,8 +1122,7 @@ const FleetManagement = () => {
     return (
                   <div 
                     key={vehicle.id} 
-                    className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-                    onClick={() => handleVehicleClick(vehicle)}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
                   >
                     <div className="flex justify-between items-start mb-2">
               <div>
@@ -1093,8 +1140,66 @@ const FleetManagement = () => {
                       <p>Fuel: {vehicle.fuelLevel}%</p>
                       <p>Daily Rate: ${vehicle.dailyRate}</p>
               </div>
-                    <div className="mt-3 flex justify-end">
-                      <span className="text-xs text-indigo-600">Click to edit</span>
+                    <div className="mt-3 space-y-2">
+                      {/* Primary Actions Row */}
+                      <div className="flex justify-between gap-2">
+                        <button
+                          onClick={() => handleVehicleClick(vehicle)}
+                          className="flex-1 inline-flex items-center justify-center px-3 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleIndividualDelete(vehicle);
+                          }}
+                          className="flex-1 inline-flex items-center justify-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Delete
+                        </button>
+                      </div>
+                      
+                      {/* Status Actions Row */}
+                      <div className="flex justify-between gap-2">
+                        {vehicle.status !== 'rented' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRentalStatusUpdate(vehicle.id, 'rented');
+                            }}
+                            className="flex-1 inline-flex items-center justify-center px-3 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100"
+                          >
+                            <Users className="w-3 h-3 mr-1" />
+                            Rent
+                          </button>
+                        )}
+                        {vehicle.status === 'rented' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRentalStatusUpdate(vehicle.id, 'available');
+                            }}
+                            className="flex-1 inline-flex items-center justify-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Return
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNavigateToMaintenance(vehicle);
+                            setShowVehicleDetails(false);
+                          }}
+                          className="flex-1 inline-flex items-center justify-center px-3 py-1.5 border border-yellow-300 text-xs font-medium rounded text-yellow-700 bg-yellow-50 hover:bg-yellow-100"
+                        >
+                          <Wrench className="w-3 h-3 mr-1" />
+                          Maintenance
+                        </button>
+                      </div>
       </div>
     </div>
             );
@@ -1133,6 +1238,42 @@ const FleetManagement = () => {
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
                   Delete Fleet
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Individual Vehicle Delete Confirmation Modal */}
+      {showIndividualDeleteModal && selectedVehicleForDelete && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <Trash2 className="h-6 w-6 text-red-600" />
+                </div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mt-4">
+                Delete Vehicle
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Are you sure you want to delete the vehicle <strong>{selectedVehicleForDelete.make} {selectedVehicleForDelete.model}</strong> with license plate <strong>{selectedVehicleForDelete.licensePlate}</strong>? 
+                  This action cannot be undone.
+                  </p>
+                </div>
+              <div className="flex justify-center space-x-4 px-4 py-3">
+                <button
+                  onClick={() => setShowIndividualDeleteModal(false)}
+                  className="px-4 py-2 bg-white text-gray-500 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmIndividualDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Delete Vehicle
                 </button>
               </div>
             </div>

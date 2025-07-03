@@ -53,12 +53,50 @@ const VehicleCard = ({
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onBulkImageUpdate(group.make, group.model, reader.result, file);
-        setShowImageUpload(false);
-      };
-      reader.readAsDataURL(file);
+      // Limit: 300KB
+      const MAX_SIZE = 300 * 1024;
+      const MAX_WIDTH = 800;
+      if (file.size > MAX_SIZE) {
+        // Compress using canvas
+        const img = new window.Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const scale = Math.min(1, MAX_WIDTH / img.width);
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          // Try to compress to JPEG, fallback to PNG
+          let dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          if (dataUrl.length > MAX_SIZE * 1.33) {
+            dataUrl = canvas.toDataURL('image/png');
+          }
+          if (dataUrl.length > MAX_SIZE * 1.33) {
+            alert('Image is too large even after compression. Please choose a smaller image.');
+            setShowImageUpload(false);
+            return;
+          }
+          onBulkImageUpdate(group.make, group.model, dataUrl, file);
+          setShowImageUpload(false);
+          URL.revokeObjectURL(url);
+        };
+        img.onerror = () => {
+          alert('Failed to load image.');
+          setShowImageUpload(false);
+          URL.revokeObjectURL(url);
+        };
+        img.src = url;
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          onBulkImageUpdate(group.make, group.model, reader.result, file);
+          setShowImageUpload(false);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -73,18 +111,18 @@ const VehicleCard = ({
 
   return (
     <div 
-      key={refreshKey}
+      key={`${group.make}-${group.model}-${refreshKey}`}
       className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-indigo-300 cursor-pointer group"
       onClick={() => onClick(group)}
     >
       {/* Vehicle Image */}
       <div className="relative">
         <img
-          src={group.image || '/img/cars/default.png'}
+          src={group.image || '/img/cars/default.svg'}
           alt={`${group.make} ${group.model}`}
           className="w-full h-48 object-cover rounded-t-lg"
           onError={(e) => {
-            e.target.src = '/img/cars/default.png';
+            e.target.src = '/img/cars/default.svg';
           }}
         />
         
@@ -290,30 +328,84 @@ const VehicleCard = ({
         )}
 
         {/* Action Buttons */}
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails(group);
-            }}
-            className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <Eye className="w-4 h-4 mr-1" />
-            View
-          </button>
-          
-          {group.vehicles.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {/* Primary Action Buttons */}
+          <div className="flex gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onEditVehicle(group.vehicles[0]);
+                onViewDetails(group);
               }}
-              className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              <Edit className="w-4 h-4 mr-1" />
-              Edit
+              <Eye className="w-4 h-4 mr-1" />
+              View
             </button>
-          )}
+            
+            {group.vehicles.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditVehicle(group.vehicles[0]);
+                }}
+                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                Edit
+              </button>
+            )}
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex gap-2">
+            {/* Rent button - show only if there are available vehicles */}
+            {group.availableCount > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const availableVehicle = group.vehicles.find(v => v.status === 'available');
+                  if (availableVehicle) {
+                    onRentalStatusUpdate(availableVehicle.id, 'rented');
+                  }
+                }}
+                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                <Users className="w-4 h-4 mr-1" />
+                Rent ({group.availableCount})
+              </button>
+            )}
+
+            {/* Return button - show only if there are rented vehicles */}
+            {group.rentedCount > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const rentedVehicle = group.vehicles.find(v => v.status === 'rented');
+                  if (rentedVehicle) {
+                    onRentalStatusUpdate(rentedVehicle.id, 'available');
+                  }
+                }}
+                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Return ({group.rentedCount})
+              </button>
+            )}
+
+            {/* Maintenance button - always show if there are vehicles */}
+            {group.vehicles.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigateToMaintenance(sampleVehicle);
+                }}
+                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-yellow-300 text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+              >
+                <Wrench className="w-4 h-4 mr-1" />
+                Maintenance
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Hover overlay hint */}
