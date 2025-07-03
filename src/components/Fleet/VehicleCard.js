@@ -1,21 +1,15 @@
 import React, { useState, useRef } from 'react';
 import {
-  Car,
   Wrench,
   CheckCircle,
-  MapPin,
   MoreVertical,
   Eye,
   Edit,
   Trash2,
   Image as ImageIcon,
-  Download,
   Users,
   AlertCircle,
   XCircle,
-  BarChart3,
-  DollarSign,
-  Calendar,
   Upload
 } from 'lucide-react';
 
@@ -34,36 +28,7 @@ const VehicleCard = ({
   const [showImageUpload, setShowImageUpload] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Helper functions
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'available': 
-        return 'bg-green-100 text-green-800';
-      case 'rented': 
-        return 'bg-blue-100 text-blue-800';
-      case 'maintenance': 
-        return 'bg-yellow-100 text-yellow-800';
-      case 'out-of-service': 
-        return 'bg-red-100 text-red-800';
-      default: 
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'available': 
-        return CheckCircle;
-      case 'rented': 
-        return Users;
-      case 'maintenance': 
-        return Wrench;
-      case 'out-of-service': 
-        return XCircle;
-      default: 
-        return AlertCircle;
-    }
-  };
+  // Helper functions for fleet status display
 
   // Calculate fleet status
   const getFleetStatus = () => {

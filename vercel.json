@@ -5,6 +5,8 @@
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "create-react-app",
   "env": {
-    "NODE_OPTIONS": "--max-old-space-size=4096"
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "SKIP_PREFLIGHT_CHECK": "true",
+    "GENERATE_SOURCEMAP": "false"
   }
 } 
