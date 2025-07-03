@@ -4,18 +4,16 @@ import { AuthProvider } from './components/Auth/AuthContext';
 import { useAuth } from './components/Auth/AuthContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard/Dashboard';
-import Cars from './pages/Cars/Cars';
-import AddCar from './pages/Cars/AddCar';
-import EditCar from './pages/Cars/EditCar';
-import BulkUpdateCars from './pages/Cars/BulkUpdateCars';
 import Bookings from './pages/Bookings/Bookings';
 import Users from './pages/Users/Users';
 import Analytics from './pages/Analytics/Analytics';
 import Settings from './pages/Settings/Settings';
-import Maintenance from './pages/Maintenance/Maintenance';
 import EmployeeManagement from './pages/Employees/EmployeeManagement';
 import AdminPanel from './pages/Admin/AdminPanel';
 import LoginPage from './components/Auth/LoginPage';
+import ContentManagement from './pages/Content/ContentManagement';
+import FleetManagement from './pages/Fleet/FleetManagement';
+import RevenueManagement from './pages/Revenue/RevenueManagement';
 import './App.css';
 
 // Component to handle authentication routing
@@ -32,18 +30,6 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={
           isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
         } />
-        <Route path="/cars" element={
-          isAuthenticated ? <Cars /> : <Navigate to="/login" replace />
-        } />
-        <Route path="/cars/new" element={
-          isAuthenticated ? <AddCar /> : <Navigate to="/login" replace />
-        } />
-        <Route path="/cars/edit/:id" element={
-          isAuthenticated ? <EditCar /> : <Navigate to="/login" replace />
-        } />
-        <Route path="/cars/bulk-update" element={
-          isAuthenticated ? <BulkUpdateCars /> : <Navigate to="/login" replace />
-        } />
         <Route path="/bookings" element={
           isAuthenticated ? <Bookings /> : <Navigate to="/login" replace />
         } />
@@ -56,14 +42,20 @@ const AppRoutes = () => {
         <Route path="/settings" element={
           isAuthenticated ? <Settings /> : <Navigate to="/login" replace />
         } />
-        <Route path="/maintenance" element={
-          isAuthenticated ? <Maintenance /> : <Navigate to="/login" replace />
-        } />
         <Route path="/employees" element={
           isAuthenticated ? <EmployeeManagement /> : <Navigate to="/login" replace />
         } />
         <Route path="/admin" element={
           isAuthenticated ? <AdminPanel /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/content" element={
+          isAuthenticated ? <ContentManagement /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/fleet" element={
+          isAuthenticated ? <FleetManagement /> : <Navigate to="/login" replace />
+        } />
+        <Route path="/revenue" element={
+          isAuthenticated ? <RevenueManagement /> : <Navigate to="/login" replace />
         } />
       </Routes>
     </Layout>

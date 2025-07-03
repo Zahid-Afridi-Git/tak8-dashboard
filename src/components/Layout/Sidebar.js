@@ -11,7 +11,10 @@ import {
   Wrench,
   Shield,
   UserCog,
-  LogOut
+  LogOut,
+  Globe,
+  DollarSign,
+  Truck
 } from 'lucide-react';
 import useStore from '../../store';
 import { useAuth } from '../Auth/AuthContext';
@@ -28,10 +31,11 @@ const Sidebar = () => {
 
   // Navigation items with permission requirements
   const conditionalNavigation = [
-    { name: 'Cars', href: '/cars', icon: Car, permission: 'cars.view' },
+    { name: 'Fleet Management', href: '/fleet', icon: Truck, permission: 'cars.view' },
     { name: 'Bookings', href: '/bookings', icon: Calendar, permission: 'bookings.view' },
-    { name: 'Maintenance', href: '/maintenance', icon: Wrench, permission: 'maintenance.view' },
+    { name: 'Revenue (AUD)', href: '/revenue', icon: DollarSign, permission: 'bookings.view' },
     { name: 'Users', href: '/users', icon: Users, permission: 'users.view' },
+    { name: 'Website & Content', href: '/content', icon: Globe, permission: 'cars.view' },
     { name: 'Analytics', href: '/analytics', icon: BarChart3, permission: 'analytics.view_full' },
   ];
 

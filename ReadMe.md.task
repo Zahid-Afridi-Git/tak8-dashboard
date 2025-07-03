@@ -1,0 +1,40 @@
+🔧 TASK:
+Create a complete CMS for the TAK8 website shown in the provided screenshots.
+
+✅ GOAL:
+- Do NOT integrate it yet into the public website.
+- Build an admin panel to manage content for all pages shown in my images.
+- Ensure that once content is connected, the website looks exactly the same as in the screenshots.
+
+✅ STEPS:
+- Analyze the website structure and sections in my uploaded images.
+- Design database schemas matching the sections and fields for:
+    - Home page
+    - Our Services page
+    - Blog page
+    - About Us page
+    - Contact Us page
+- Implement separate admin forms for each page type.
+- Allow adding, editing, deleting:
+    - Text content
+    - Images
+    - Buttons/links
+    - Lists of sections (e.g. services, testimonials)
+- Implement rich text editing where needed (blogs, about page).
+- Set up image uploads to Cloudinary or another service, store only URLs in DB.
+- Provide API endpoints to fetch content for each page separately.
+
+✅ TECHNOLOGY:
+- Frontend: React.js for admin panel
+- Styling: Tailwind CSS
+- Backend: Node.js with Express or your recommended backend
+- Database: PostgreSQL or MongoDB
+- Image storage: Cloudinary or similar
+
+✅ OUTPUT:
+- Provide full backend and frontend code for the CMS admin panel.
+- Provide database schema definitions.
+- DO NOT connect to the public website yet.
+- Provide instructions on how to integrate API calls later to replace static content with dynamic content.
+
+
