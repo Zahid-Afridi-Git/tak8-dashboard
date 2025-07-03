@@ -26,7 +26,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -55,6 +55,12 @@
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.8.3"
+    "typescript": "^4.9.5"
+  },
+  "overrides": {
+    "typescript": "$typescript"
+  },
+  "resolutions": {
+    "typescript": "^4.9.5"
   }
 }
